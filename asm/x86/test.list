@@ -1,0 +1,49 @@
+GAS LISTING test.s 			page 1
+
+
+   1                                	
+   2                                	    .text
+   3                                	
+   4 0000 00D9                       	    addb %bl, %cl
+   5                                	    # addb %bh, %ch
+   6 0002 6601D9                     	    addw %bx, %cx
+   7 0005 01D9                       	    addl %ebx, %ecx
+   8 0007 4801D9                     	    addq %rbx, %rcx
+   9                                	
+  10 000a 4100D9                     	    addb %bl, %r9b
+  11 000d 664101D9                   	    addw %bx, %r9w
+  12 0011 4101D9                     	    addl %ebx, %r9d
+  13 0014 4901D9                     	    addq %rbx, %r9
+  14                                	
+  15                                	    # byte
+  16 0017 00C1                       	    addb %al, %cl
+  17 0019 4100C1                     	    addb %al, %r9b
+  18                                	
+  19                                	    # 66 prefix
+  20 001c 6601C1                     	    addw %ax, %cx
+  21 001f 664101C1                   	    addw %ax, %r9w
+  22 0023 664501C1                   	    addw %r8w, %r9w
+  23                                	
+  24 0027 01C1                       	    addl %eax, %ecx
+  25 0029 4101C1                     	    addl %eax, %r9d
+  26 002c 4401C1                     	    addl %r8d, %ecx
+  27 002f 4501C1                     	    addl %r8d, %r9d
+  28                                	
+  29 0032 4801C1                     	    addq %rax, %rcx
+  30 0035 4901C1                     	    addq %rax, %r9
+  31 0038 4C01C1                     	    addq %r8, %rcx
+  32 003b 4D01C1                     	    addq %r8, %r9
+  33                                	
+  34 003e 480101                     	    addq %rax, (%rcx)
+  35 0041 48018178 563412            	    addq %rax, 305419896(%rcx)
+  36 0048 4A010411                   	    addq %rax, 0(%rcx,%r10,1)
+  37 004c 4A010415 00000000          	    addq %rax, 0(,%r10,1)
+  38                                	
+  39                                	    # 67 prefix
+  40 0054 670101                     	    addl %eax, (%ecx)
+  41 0057 67440101                   	    addl %r8d, (%ecx)
+  42                                	
+  43                                	    # 67 66 prefix
+  44 005b 67660101                   	    addw %ax, (%ecx)
+  45                                	
+  46 005f C3                         	    retq
