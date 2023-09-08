@@ -29,11 +29,11 @@ impl<T : Default + Copy, const N : usize, const M : usize> From<[T; M]> for Micr
     }
 }
 
-impl<T, const N : usize> MicroVec<T, N> {
+impl<T : Copy, const N : usize> MicroVec<T, N> {
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         let len = self.0 as usize;
-        &self.1[1..1+len]
+        &self.1[0..len]
     }
 
     #[inline]
@@ -42,7 +42,7 @@ impl<T, const N : usize> MicroVec<T, N> {
         if len + 1 > N {
             Err(MicroVecError)
         } else {
-            self.1[1+len] = t;
+            self.1[len] = t;
             self.0 += 1;
             Ok(())
         }
@@ -51,14 +51,26 @@ impl<T, const N : usize> MicroVec<T, N> {
     #[inline]
     pub fn push_sat(&mut self, t: T) {
         let len = self.0 as usize;
-        if len + 1 <= N {
-            self.1[1+len] = t;
+        if len + 1 < N {
+            self.1[len] = t;
             self.0 += 1;
+        }
+    }
+
+    #[inline]
+    pub fn push_slice(&mut self, t: &[T]) -> Result<(), MicroVecError> {
+        let len = self.0 as usize;
+        if len + t.len() >= N {
+            return Err(MicroVecError)
+        } else {
+            self.1[len..len+t.len()].copy_from_slice(t);
+            self.0 += t.len() as u8;
+            Ok(())
         }
     }
 }
 
-impl<T, const N : usize> core::ops::Deref for MicroVec<T, N> {
+impl<T : Clone + Copy, const N : usize> core::ops::Deref for MicroVec<T, N> {
     type Target = [T];
 
     #[inline]
@@ -72,5 +84,4 @@ fn test_microvec() {
     let mut mv = MicroVec::<_, 32>::new();
     mv.push(1_u8).unwrap();
     assert_eq!(mv.as_slice(), &[1]);
-
 }

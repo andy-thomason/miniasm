@@ -2,7 +2,7 @@ use miniasm::x86::Instruction;
 
 #[test]
 fn test_asm() {
-    let text = include_str!("../asm/x86/test.list");
+    let text = include_str!("../asm/x86/testmodrm.list");
 
     for line in text.split('\n') {
         println!("{line}");
@@ -10,7 +10,7 @@ fn test_asm() {
         let Some(v) = line.next() else { continue };
         let Ok(_line_number) = v.parse::<u32>() else { continue };
         let Some(src) = line.next() else { continue };
-        let Ok(_address) = u8::from_str_radix(src, 16) else { continue };
+        let Ok(_address) = u64::from_str_radix(src, 16) else { continue };
 
         let mut bytes : Vec<u8> = vec![];
         let mut asm = String::new();
@@ -32,11 +32,14 @@ fn test_asm() {
             asm.push_str(src);
         }
     
-        println!("{:02x?} asm: {}", bytes, asm);
+        println!("{:02x?} asm: {}", hex::encode(&bytes), asm);
 
         let ins = Instruction::from_str(&asm).expect("fail asm");
-        println!("Ins: {}", ins);
+        let obytes = ins.encode().expect("encode error");
 
-        assert_eq!(ins.to_string(), asm);
+        println!("{:02x?} asm: {}", hex::encode(obytes.as_slice()), ins);
+
+        assert_eq!(obytes.as_slice(), &bytes);
     }
+    assert!(false);
 }
