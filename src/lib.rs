@@ -187,10 +187,10 @@ pub mod x86 {
     }
 
     insn! {
-        AddB((Arg, Arg)), "addb", (I8, 0x00, 0x00),
-        AddW((Arg, Arg)), "addw", (I16, 0x01, 0x00),
-        AddL((Arg, Arg)), "addl", (I32, 0x01, 0x00),
-        AddQ((Arg, Arg)), "addq", (I64, 0x01, 0x00),
+        AddB((Arg, Arg)), "addb", (I8, 0x00, 0x02),
+        AddW((Arg, Arg)), "addw", (I16, 0x01, 0x03),
+        AddL((Arg, Arg)), "addl", (I32, 0x01, 0x03),
+        AddQ((Arg, Arg)), "addq", (I64, 0x01, 0x03),
         RetQ(()), "retq", 0xc3,
     }
 
@@ -274,7 +274,7 @@ pub mod x86 {
     impl Encode for (&(Arg, Arg), (RegClass, u8, u8)) {
         #[inline(never)]
         fn encode(self) -> Result<EncodeResult, EncodeError> {
-            let ((src, dest), (_class, fwd, _back)) = self;
+            let ((src, dest), (_class, fwd, rev)) = self;
             use Arg::*;
             let mut res = EncodeResult::default();
             match (src, dest) {
@@ -298,17 +298,23 @@ pub mod x86 {
                 // (I(_), M(_, _)) => todo!(),
                 // (I(_), Ms(_, _, _)) => todo!(),
                 // (I(_), M2s(_, _, _, _)) => todo!(),
-                (M(_, _), R(_)) => todo!(),
+                (M(offset, a), R(s)) => {
+                    gen_modrm(&mut res, rev, s, None, *offset, Some(a), None, &Scale::S1)?;
+                }
                 // (M(_, _), I(_)) => todo!(),
                 // (M(_, _), M(_, _)) => todo!(),
                 // (M(_, _), Ms(_, _, _)) => todo!(),
                 // (M(_, _), M2s(_, _, _, _)) => todo!(),
-                (Ms(_, _, _), R(_)) => todo!(),
+                (Ms(offset, sr, scale), R(s)) => {
+                    gen_modrm(&mut res, rev, s, None, *offset, None, Some(sr), scale)?;
+                }
                 // (Ms(_, _, _), I(_)) => todo!(),
                 // (Ms(_, _, _), M(_, _)) => todo!(),
                 // (Ms(_, _, _), Ms(_, _, _)) => todo!(),
                 // (Ms(_, _, _), M2s(_, _, _, _)) => todo!(),
-                (M2s(_, _, _, _), R(_)) => todo!(),
+                (M2s(offset, a, sr, scale), R(s)) => {
+                    gen_modrm(&mut res, rev, s, None, *offset, Some(a), Some(sr), scale)?;
+                }
                 // (M2s(_, _, _, _), I(_)) => todo!(),
                 // (M2s(_, _, _, _), M(_, _)) => todo!(),
                 // (M2s(_, _, _, _), Ms(_, _, _)) => todo!(),
@@ -440,9 +446,9 @@ pub mod x86 {
         let (base, mut offsize) = if offset == 0 {
             (0x00, Offsize::O0)
         } else if offset >= -128 && offset < 128 {
-            (0x20, Offsize::O1)
+            (0x40, Offsize::O1)
         } else {
-            (0x40, Offsize::O4)
+            (0x80, Offsize::O4)
         };
 
         let sibupper : u8 = match scale {
@@ -478,7 +484,7 @@ pub mod x86 {
             res.push_sat(0x67);
         }
 
-        if sclass == I32 {
+        if sclass == I16 {
             res.push_sat(0x66);
         }
 
@@ -501,6 +507,9 @@ pub mod x86 {
                     res.push_sat(base + slownum * 8 + 4);
                     res.push_sat(sibupper + 4 * 8 + alownum);
                 }
+            }
+            (s, Some(d), None, None) if s.is_8bit() && d.is_8bit() => {
+                res.push_sat(0xc0 + slownum * 8 + dlownum);
             }
             (s, Some(d), None, None) if s.is_int() && s == d => {
                 res.push_sat(0xc0 + slownum * 8 + dlownum);

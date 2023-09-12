@@ -1,9 +1,12 @@
-use miniasm::x86::Instruction;
+use miniasm::x86::{Instruction, EncodeResult};
 
 #[test]
 fn test_asm() {
-    let text = include_str!("../asm/x86/testmodrm.list");
+    println!("{:?}", std::env::current_dir());
+    // let text = include_str!("../asm/x86/testall.list");
+    let text = std::fs::read_to_string("tests/testall.list").unwrap();
 
+    let mut prev_bytes = EncodeResult::new();
     for line in text.split('\n') {
         println!("{line}");
         let mut line = line.split_ascii_whitespace();
@@ -32,14 +35,17 @@ fn test_asm() {
             asm.push_str(src);
         }
     
-        println!("{:02x?} asm: {}", hex::encode(&bytes), asm);
+        println!("gnu:     {:02x?} asm: {}", hex::encode(&bytes), asm);
 
         let ins = Instruction::from_str(&asm).expect("fail asm");
         let obytes = ins.encode().expect("encode error");
 
-        println!("{:02x?} asm: {}", hex::encode(obytes.as_slice()), ins);
+        println!("miniasm: {:02x?} asm: {}", hex::encode(obytes.as_slice()), ins);
 
         assert_eq!(obytes.as_slice(), &bytes);
+
+        // Generated instructions must be monotonic.
+        assert!(obytes.as_slice() > prev_bytes.as_slice());
+        prev_bytes = obytes;
     }
-    assert!(false);
 }
