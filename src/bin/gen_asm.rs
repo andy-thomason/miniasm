@@ -54,7 +54,7 @@ fn gen_modrm<W : Write>(w: &mut W, op: &str, s: &str, disp: &str, ipbp: &str, ar
                     } else if j == 5 && sh == 0 {
                         if gen_empty {
                             if !rev {
-                                writeln!(w, " {op} {s}, 0")?
+                                writeln!(w, " {op} {s}, 1")?
                             }
                         }
                     }
@@ -66,7 +66,7 @@ fn gen_modrm<W : Write>(w: &mut W, op: &str, s: &str, disp: &str, ipbp: &str, ar
     Ok(())
 }
 
-fn gen_ins<W : Write>(w: &mut W, op: &str, regs: &[&str], aregs: &[&str], sregs: &[&str], rev: bool) -> std::io::Result<()> {
+fn gen_modrm_ins<W : Write>(w: &mut W, op: &str, regs: &[&str], aregs: &[&str], sregs: &[&str], rev: bool) -> std::io::Result<()> {
     for s in regs {
         gen_modrm(w, op, s, "", "%rip", aregs, sregs, true, rev)?;
     }
@@ -82,6 +82,13 @@ fn gen_ins<W : Write>(w: &mut W, op: &str, regs: &[&str], aregs: &[&str], sregs:
                 writeln!(w, " {op} {s}, {d}")?;
             }
         }
+    }
+    Ok(())
+}
+
+fn gen_imm_ins<W : Write>(w: &mut W, op: &str, regs: &[&str]) -> std::io::Result<()> {
+    for r in regs {
+        writeln!(w, " {op} $1, {r}")?;
     }
     Ok(())
 }
@@ -126,10 +133,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let w = &mut file;
 
-    gen_ins(w, "addb", &IREGS[4][0..8], &IREGS[3][0..8], &IREGS[3][0..8], false)?;
-    gen_ins(w, "addl", &IREGS[2][0..8], &IREGS[3][0..8], &IREGS[3][0..8], false)?;
-    gen_ins(w, "addb", &IREGS[4][0..8], &IREGS[3][0..8], &IREGS[3][0..8], true)?;
-    gen_ins(w, "addl", &IREGS[2][0..8], &IREGS[3][0..8], &IREGS[3][0..8], true)?;
+    gen_modrm_ins(w, "addb", &IREGS[4][0..8], &IREGS[3][0..8], &IREGS[3][0..8], false)?;
+    gen_modrm_ins(w, "addl", &IREGS[2][0..8], &IREGS[3][0..8], &IREGS[3][0..8], false)?;
+    gen_modrm_ins(w, "addb", &IREGS[4][0..8], &IREGS[3][0..8], &IREGS[3][0..8], true)?;
+    gen_modrm_ins(w, "addl", &IREGS[2][0..8], &IREGS[3][0..8], &IREGS[3][0..8], true)?;
+    gen_imm_ins(w, "addb", &IREGS[4][0..8])?;
+    gen_imm_ins(w, "addl", &IREGS[2][0..8])?;
 
 
     // let mut file = std::fs::File::create("modrm2.s")?;

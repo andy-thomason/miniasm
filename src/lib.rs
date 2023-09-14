@@ -2,15 +2,14 @@
 #![feature(fmt_internals)]
 
 pub mod micro_string;
-pub mod mico_vec;
+pub mod encode_result;
 pub use micro_string::{MicroString, ToMicroString};
 
 pub mod x86 {
     #![allow(dead_code)]
 
     use core::fmt::Write;
-
-    use crate::mico_vec::MicroVec;
+    use crate::encode_result::EncodeResult;
 
     macro_rules! def_regs {
         ($(($id : ident, $name : expr, $number : expr),)*) => {
@@ -87,6 +86,13 @@ pub mod x86 {
     }
 
     #[derive(Debug, PartialEq)]
+    pub enum Category {
+        OpFwd,
+        OpRev,
+        OpImm8,
+    }
+
+    #[derive(Debug, PartialEq)]
     #[repr(u8)]
     pub enum Scale {
         S1,
@@ -95,10 +101,15 @@ pub mod x86 {
         S8,
     }
 
+    enum Offsize {
+        O0, O1, O4,
+    }
+
     pub enum Arg {
         R(Reg),
         I(i32),
-        M(i32, Reg),
+        M(i32),
+        Mr(i32, Reg),
         Ms(i32, Reg, Scale),
         M2s(i32, Reg, Reg, Scale),
     }
@@ -107,8 +118,9 @@ pub mod x86 {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             match self {
                 Arg::R(r) => r.fmt(f),
-                Arg::I(v) => v.fmt(f),
-                Arg::M(o, r1) => {
+                Arg::I(v) => write!(f, "${v}"),
+                Arg::M(v) => v.fmt(f),
+                Arg::Mr(o, r1) => {
                     if *o == 0 { write!(f, "({r1})") } else { write!(f, "{o}({r1})") }
                 }
                 Arg::Ms(o, r2, scale) => {
@@ -187,10 +199,10 @@ pub mod x86 {
     }
 
     insn! {
-        AddB((Arg, Arg)), "addb", (I8, 0x00, 0x02),
-        AddW((Arg, Arg)), "addw", (I16, 0x01, 0x03),
-        AddL((Arg, Arg)), "addl", (I32, 0x01, 0x03),
-        AddQ((Arg, Arg)), "addq", (I64, 0x01, 0x03),
+        AddB((Arg, Arg)), "addb", (I8, 0),
+        AddW((Arg, Arg)), "addw", (I16, 0),
+        AddL((Arg, Arg)), "addl", (I32, 0),
+        AddQ((Arg, Arg)), "addq", (I64, 0),
         RetQ(()), "retq", 0xc3,
     }
 
@@ -247,7 +259,7 @@ pub mod x86 {
         }
     }
 
-    pub type EncodeResult = MicroVec<u8, 15>;
+    // pub type EncodeResult = MicroVec<u8, 15>;
 
     #[derive(Debug)]
     pub struct EncodeError;
@@ -266,54 +278,56 @@ pub mod x86 {
     impl Encode for (&(), u8) {
         fn encode(self) -> Result<EncodeResult, EncodeError> {
             let mut res = EncodeResult::default();
-            res.push_sat(self.1);
+            res.push_u8(self.1);
             Ok(res)
         }
     }
 
-    impl Encode for (&(Arg, Arg), (RegClass, u8, u8)) {
+    impl Encode for (&(Arg, Arg), (RegClass, u8)) {
         #[inline(never)]
         fn encode(self) -> Result<EncodeResult, EncodeError> {
-            let ((src, dest), (_class, fwd, rev)) = self;
+            let ((src, dest), (class, group)) = self;
             use Arg::*;
             let mut res = EncodeResult::default();
             match (src, dest) {
-                (R(s), R(d)) => {
-                    gen_modrm(&mut res, fwd, s, Some(d), 0, None, None, &Scale::S1)?;
+                (R(r), R(rm)) => {
+                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), Some(rm), None, None, None, &Scale::S1, None)?;
                 }
-                (R(s), M(offset, a)) => {
-                    gen_modrm(&mut res, fwd, s, None, *offset, Some(a), None, &Scale::S1)?;
+                (R(r), M(imm)) => {
+                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*imm), None, None, &Scale::S1, None)?;
                 }
-                (R(s), I(offset)) => {
-                    gen_modrm(&mut res, fwd, s, None, *offset, None, None, &Scale::S1)?;
+                (R(r), Mr(offset, a)) => {
+                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
                 }
-                (R(s), Ms(offset, sr, scale)) => {
-                    gen_modrm(&mut res, fwd, s, None, *offset, None, Some(sr), scale)?;
+                (R(r), Ms(offset, sr, scale)) => {
+                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
                 }
-                (R(s), M2s(offset, a, sr, scale)) => {
-                    gen_modrm(&mut res, fwd, s, None, *offset, Some(a), Some(sr), scale)?;
+                (R(r), M2s(offset, a, sr, scale)) => {
+                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
                 }
-                // (I(_), R(_)) => todo!(),
+                (I(immediate), R(rm)) => {
+                    generic_ins(&mut res, class, group, Category::OpImm8, None, Some(rm), None, None, None, &Scale::S1, Some(*immediate))?;
+                }
                 // (I(_), I(_)) => todo!(),
                 // (I(_), M(_, _)) => todo!(),
                 // (I(_), Ms(_, _, _)) => todo!(),
                 // (I(_), M2s(_, _, _, _)) => todo!(),
-                (M(offset, a), R(s)) => {
-                    gen_modrm(&mut res, rev, s, None, *offset, Some(a), None, &Scale::S1)?;
+                (Mr(offset, a), R(r)) => {
+                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
                 }
                 // (M(_, _), I(_)) => todo!(),
                 // (M(_, _), M(_, _)) => todo!(),
                 // (M(_, _), Ms(_, _, _)) => todo!(),
                 // (M(_, _), M2s(_, _, _, _)) => todo!(),
-                (Ms(offset, sr, scale), R(s)) => {
-                    gen_modrm(&mut res, rev, s, None, *offset, None, Some(sr), scale)?;
+                (Ms(offset, sr, scale), R(r)) => {
+                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
                 }
                 // (Ms(_, _, _), I(_)) => todo!(),
                 // (Ms(_, _, _), M(_, _)) => todo!(),
                 // (Ms(_, _, _), Ms(_, _, _)) => todo!(),
                 // (Ms(_, _, _), M2s(_, _, _, _)) => todo!(),
-                (M2s(offset, a, sr, scale), R(s)) => {
-                    gen_modrm(&mut res, rev, s, None, *offset, Some(a), Some(sr), scale)?;
+                (M2s(offset, a, sr, scale), R(r)) => {
+                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
                 }
                 // (M2s(_, _, _, _), I(_)) => todo!(),
                 // (M2s(_, _, _, _), M(_, _)) => todo!(),
@@ -340,6 +354,12 @@ pub mod x86 {
                 b'%' => {
                     Ok(Arg::R(Reg::from_str(src)?))
                 }
+                b'$' => {
+                    let Ok(imm) = parse_immediate(&src[1..]) else {
+                        return Err(ParseError);
+                    };
+                    Ok(Arg::I(imm))
+                }
                 b'0'..=b'9'|b'('|b'-' => {
                     // 123(%ecx) (%ecx,%edx,2) (, %edx, 2)
                     let mut offset : i32 = 0;
@@ -351,7 +371,7 @@ pub mod x86 {
                         offset = o;
                     }
                     if lhs == src.len() {
-                        return Ok(Arg::I(offset));
+                        return Ok(Arg::M(offset));
                     }
                     let Some(rhs) = src[lhs+1..].bytes().position(|b| b == b')') else {
                         return Err(ParseError);
@@ -359,7 +379,7 @@ pub mod x86 {
                     let mut s = src[lhs+1..lhs+1+rhs].split(',');
                     match (s.next(), s.next(), s.next(), s.next()) {
                         (Some(r1), None, _, _) => {
-                            Ok(Arg::M(offset, Reg::from_str(r1)?))
+                            Ok(Arg::Mr(offset, Reg::from_str(r1)?))
                         }
                         (Some(""), Some(r2), Some(scale), None) => {
                             Ok(Arg::Ms(offset, Reg::from_str(r2)?, Scale::from_str(scale)?))
@@ -426,30 +446,158 @@ pub mod x86 {
 
 
     // fn gen_prefix(res: &mut EncodeResult, class: RegClass, aclass: Option<RegClass>, ns: u8, nd: Option<u8>, na: Option<u8>, rexr: u8, rexx: u8, rexb: u8) -> Result<(), EncodeError>  {
-    fn gen_modrm(res: &mut EncodeResult, opcode: u8, s: &Reg, d: Option<&Reg>, offset: i32, a: Option<&Reg>, sr: Option<&Reg>, scale: &Scale) -> Result<(), EncodeError>  {
+    fn generic_ins(res: &mut EncodeResult, class: RegClass, group: u8, category: Category, r: Option<&Reg>, rm: Option<&Reg>, offset: Option<i32>, a: Option<&Reg>, sr: Option<&Reg>, scale: &Scale, immediate: Option<i32>) -> Result<(), EncodeError> {
         use RegClass::*;
 
-        // d and a/sr are exclusive
+        // rm and a/sr are exclusive
         // TODO: more exclsivity checks.
-        if d.is_some() && (a.is_some() || sr.is_some()) {
+        if rm.is_some() && (a.is_some() || sr.is_some()) {
             return Err(EncodeError);
         }
 
         if a.map(Reg::class) == Some(I32) {
-            res.push_sat(0x67);
+            res.push_u8(0x67);
         }
 
-        enum Offsize {
-            O0, O1, O4,
+        let rclass = r.map(Reg::class);
+        let rmclass = rm.map(Reg::class);
+        let aclass = a.map(Reg::class);
+        let srclass = sr.map(Reg::class);
+
+        let rlownum = r.map(Reg::lownum).unwrap_or_default();
+        let r2lownum = rm.map(Reg::lownum).unwrap_or_default();
+        let alownum = a.map(Reg::lownum).unwrap_or_default();
+        let srlownum = sr.map(Reg::lownum).unwrap_or_default();
+        let rhighnum = r.map(Reg::highnum).unwrap_or_default();
+
+        // https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/40332.pdf
+        // REX.W 3 0 = Default operand size 1 = 64-bit operand size
+        // REX.R 2 1-bit (msb) extension of the ModRM reg field 1 , permitting access to 16 registers.
+        // REX.X 1 1-bit (msb) extension of the SIB index field 1 , permitting access to 16 registers.
+        // REX.B 0 1-bit (msb) extension of the ModRM r/m field 1 , SIB base field 1 , or opcode reg field, permitting access to 16 registers.
+
+        let rexw = (class == I64) as u8;
+        let rexr = rhighnum;
+        let rexb = rm.map(Reg::highnum).or(a.map(Reg::highnum)).unwrap_or_default();
+        let rexx = sr.map(Reg::highnum).unwrap_or_default();
+        let rex = 0x40 + rexw * 8 + rexr * 4 + rexb * 2 + rexx;
+
+        if aclass == Some(I32) {
+            res.push_u8(0x67);
         }
 
-        let (base, mut offsize) = if offset == 0 {
-            (0x00, Offsize::O0)
-        } else if offset >= -128 && offset < 128 {
-            (0x40, Offsize::O1)
-        } else {
-            (0x80, Offsize::O4)
-        };
+        if class == I16 {
+            res.push_u8(0x66);
+        }
+
+        // If %spl is used instead of %ah, use an 0x40 rex prefix anyway.
+        let is_spl_and_friends =
+            rclass == Some(I8) && rlownum >= 4 ||
+            rmclass == Some(I8) && r2lownum >= 4;
+
+        if rex != 0x40 || is_spl_and_friends {
+            res.push_u8(rex);
+        }
+
+        match category {
+            Category::OpFwd => {
+                if matches!(rclass, Some(I8)|Some(H8)) {
+                    res.push_u8(group * 8 + 0);
+                } else {
+                    res.push_u8(group * 8 + 1);
+                }
+                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+            }
+            Category::OpRev => {
+                if matches!(rclass, Some(I8)|Some(H8)) {
+                    res.push_u8(group * 8 + 2);
+                } else {
+                    res.push_u8(group * 8 + 3);
+                }
+                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+            }
+            Category::OpImm8 => {
+                // panic!("{:?}", (rclass, r2class, aclass, srclass));
+                match rm {
+                    Some(Reg::AL) => {
+                        res.push_u8(group * 8 + 4);
+                        res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
+                        return Ok(());
+                    }
+                    // Some(Reg::EAX) => {
+                    //     res.push_u8(group * 8 + 4);
+                    //     res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
+                    //     return Ok(());
+                    // }
+                    _ => (),
+                }
+                match class {
+                    I8|H8 => res.push_u8(0x80 + group),
+                    I32 => res.push_u8(0x83 + group),
+                    _ => todo!(),
+                }
+                
+                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+                res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
+            }
+        }
+
+        // match (rmclass, aclass, srclass) {
+        //     (None, Some(a), None) if class.is_int() && a == RegClass::PC => {
+        //         res.push_u8(base + 5);
+        //         offsize = Offsize::O4;
+        //     }
+        //     (None, Some(a), None) if class.is_int() && a.is_addr() => {
+        //         if alownum != 4 || rexx == 1 {
+        //             // not SP
+        //             res.push_u8(base + alownum);
+        //         } else {
+        //             // SP uses SIB.
+        //             res.push_u8(base + 4);
+        //             res.push_u8(sibupper + 4 * 8 + alownum);
+        //         }
+        //     }
+        //     (Some(rm), None, None) if class.is_8bit() && rm.is_8bit() => {
+        //         res.push_u8(base + r2lownum);
+        //     }
+        //     (Some(rm), None, None) if class.is_int() && rm == class => {
+        //         res.push_u8(base + r2lownum);
+        //     }
+        //     (None, Some(a), Some(sr)) if class.is_int() && a.is_addr() && sr.is_addr() => {
+        //         res.push_u8(base + 4);
+        //         res.push_u8(sibupper + srlownum * 8 + alownum);
+        //     }
+        //     (None, None, Some(sr)) if class.is_int() && sr.is_addr() => {
+        //         res.push_u8(base + 4);
+        //         res.push_u8(sibupper + srlownum * 8 + 5);
+        //         offsize = Offsize::O4;
+        //     }
+        //     (None, None, None) if class.is_int() => {
+        //         res.push_u8(base + 4);
+        //         res.push_u8(sibupper + 4 * 8 + 5);
+        //         offsize = Offsize::O4;
+        //     }
+        //     _ => todo!(),
+        // }
+
+        // if let Some(immediate) = immediate {
+        //     match class {
+        //         I8|H8 => res.push_u8(immediate.try_into().map_err(|_| EncodeError)?),
+        //         I16 => res.push_i16(immediate.try_into().map_err(|_| EncodeError)?),
+        //         I32 => res.push_i32(immediate.try_into().map_err(|_| EncodeError)?),
+        //         I64 => res.push_i32(immediate.try_into().map_err(|_| EncodeError)?),
+        //         _ => return Err(EncodeError),
+        //     }
+        // }
+
+        Ok(())
+    }
+
+    fn gen_modrm(res: &mut EncodeResult, rlownum: u8, class: RegClass, rm: Option<&Reg>, a: Option<&Reg>, sr: Option<&Reg>, offset: Option<i32>, scale: &Scale) -> Result<(), EncodeError> {
+        let anum = a.map(Reg::number).unwrap_or_default();
+        let r2lownum = rm.map(Reg::lownum).unwrap_or_default();
+        let alownum = a.map(Reg::lownum).unwrap_or_default();
+        let srlownum = sr.map(Reg::lownum).unwrap_or_default();
 
         let sibupper : u8 = match scale {
             Scale::S1 => 0x00,
@@ -458,85 +606,68 @@ pub mod x86 {
             Scale::S8 => 0xc0,
         };
     
-        let sclass = s.class();
-        let dclass = d.map(Reg::class);
+        let (base, mut offsize) = if let Some(offset) = offset {
+            if a.is_none() && sr.is_none() {
+                (0x00 + rlownum * 8, Offsize::O4)
+            } else if offset == 0 {
+                (0x00 + rlownum * 8, Offsize::O0)
+            } else if offset >= -128 && offset < 128 {
+                (0x40 + rlownum * 8, Offsize::O1)
+            } else {
+                (0x80 + rlownum * 8, Offsize::O4)
+            }
+        } else {
+            (0xc0 + rlownum * 8, Offsize::O0)
+        };
+
+        let rmclass = rm.map(Reg::class);
         let aclass = a.map(Reg::class);
         let srclass = sr.map(Reg::class);
-
-        let slownum = s.lownum();
-        let dlownum = d.map(Reg::lownum).unwrap_or_default();
-        let alownum = a.map(Reg::lownum).unwrap_or_default();
-        let srlownum = sr.map(Reg::lownum).unwrap_or_default();
-
-        // https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/40332.pdf
-        // REX.W 3 0 = Default operand size 1 = 64-bit operand size
-        // REX.R 2 1-bit (msb) extension of the ModRM reg field 1 , permitting access to 16 registers.
-        // REX.X 1 1-bit (msb) extension of the SIB index field 1 , permitting access to 16 registers.
-        // REX.B 0 1-bit (msb) extension of the ModRM r/m field 1 , SIB base field 1 , or opcode reg field, permitting access to 16 registers.
-
-        let rexw = (s.class() == I64) as u8;
-        let rexr = s.highnum();
-        let rexb = d.map(Reg::highnum).or(a.map(Reg::highnum)).unwrap_or_default();
-        let rexx = sr.map(Reg::highnum).unwrap_or_default();
-        let rex = 0x40 + rexw * 8 + rexr * 4 + rexb * 2 + rexx;
-
-        if aclass == Some(I32) {
-            res.push_sat(0x67);
-        }
-
-        if sclass == I16 {
-            res.push_sat(0x66);
-        }
-
-        if rex != 0x40 || sclass == I8 && slownum >= 4 || dclass == Some(I8) && dlownum >= 4 {
-            res.push_sat(rex);
-        }
-
-        res.push_sat(opcode);
-
-        match (sclass, dclass, aclass, srclass) {
-            (s, None, Some(a), None) if s.is_int() && a == RegClass::PC => {
-                res.push_sat(base + slownum * 8 + 5);
+        match (rmclass, aclass, srclass) {
+            (None, Some(ac), None) if class.is_int() && ac == RegClass::PC => {
+                res.push_u8(base + 5);
                 offsize = Offsize::O4;
             }
-            (s, None, Some(a), None) if s.is_int() && a.is_addr() => {
-                if alownum != 4 || rexx == 1 {
-                    res.push_sat(base + slownum * 8 + alownum);
+            (None, Some(ac), None) if class.is_int() && ac.is_addr() => {
+                if anum != 4 {
+                    // not SP
+                    res.push_u8(base + alownum);
                 } else {
-                    // xSP uses SIB.
-                    res.push_sat(base + slownum * 8 + 4);
-                    res.push_sat(sibupper + 4 * 8 + alownum);
+                    // SP uses SIB.
+                    res.push_u8(base + 4);
+                    res.push_u8(sibupper + 4 * 8 + alownum);
                 }
             }
-            (s, Some(d), None, None) if s.is_8bit() && d.is_8bit() => {
-                res.push_sat(0xc0 + slownum * 8 + dlownum);
+            (Some(rm), None, None) if class.is_8bit() && rm.is_8bit() => {
+                res.push_u8(base + r2lownum);
             }
-            (s, Some(d), None, None) if s.is_int() && s == d => {
-                res.push_sat(0xc0 + slownum * 8 + dlownum);
+            (Some(rm), None, None) if class.is_int() && rm == class => {
+                res.push_u8(base + r2lownum);
             }
-            (s, None, Some(a), Some(sr)) if s.is_int() && a.is_addr() && sr.is_addr() => {
-                res.push_sat(base + slownum * 8 + 4);
-                res.push_sat(sibupper + srlownum * 8 + alownum);
+            (None, Some(a), Some(sr)) if class.is_int() && a.is_addr() && sr.is_addr() => {
+                res.push_u8(base + 4);
+                res.push_u8(sibupper + srlownum * 8 + alownum);
             }
-            (s, None, None, Some(sr)) if s.is_int() && sr.is_addr() => {
-                res.push_sat(base + slownum * 8 + 4);
-                res.push_sat(sibupper + srlownum * 8 + 5);
+            (None, None, Some(sr)) if class.is_int() && sr.is_addr() => {
+                res.push_u8(base + 4);
+                res.push_u8(sibupper + srlownum * 8 + 5);
                 offsize = Offsize::O4;
             }
-            (s, None, None, None) if s.is_int() => {
-                res.push_sat(base + slownum * 8 + 4);
-                res.push_sat(sibupper + 4 * 8 + 5);
+            (None, None, None) if class.is_int() => {
+                res.push_u8(base + 4);
+                res.push_u8(sibupper + 4 * 8 + 5);
                 offsize = Offsize::O4;
             }
             _ => todo!(),
         }
 
-        match offsize {
-            Offsize::O0 => (),
-            Offsize::O1 => res.push_sat((offset & 0xff) as u8),
-            Offsize::O4 => res.push_slice(&(offset).to_le_bytes()).unwrap(),
+        if let Some(offset) = offset {
+            match offsize {
+                Offsize::O0 => (),
+                Offsize::O1 => res.push_u8((offset & 0xff) as u8),
+                Offsize::O4 => res.push_i32(offset),
+            }
         }
-
         Ok(())
     }
 

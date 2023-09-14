@@ -39,7 +39,7 @@ GAS LISTING /tmp/testall.s 			page 1
   36 0072 00041E                     	 addb %al, (%rsi,%rbx,1)
   37 0075 00041F                     	 addb %al, (%rdi,%rbx,1)
   38 0078 000424                     	 addb %al, (%rsp)
-  39 007b 00042500 000000            	 addb %al, 0
+  39 007b 00042501 000000            	 addb %al, 1
   40 0082 000430                     	 addb %al, (%rax,%rsi,1)
   41 0085 000431                     	 addb %al, (%rcx,%rsi,1)
   42 0088 000432                     	 addb %al, (%rdx,%rsi,1)
@@ -252,7 +252,7 @@ GAS LISTING /tmp/testall.s 			page 1
  237 032e 000C1E                     	 addb %cl, (%rsi,%rbx,1)
  238 0331 000C1F                     	 addb %cl, (%rdi,%rbx,1)
  239 0334 000C24                     	 addb %cl, (%rsp)
- 240 0337 000C2500 000000            	 addb %cl, 0
+ 240 0337 000C2501 000000            	 addb %cl, 1
  241 033e 000C30                     	 addb %cl, (%rax,%rsi,1)
  242 0341 000C31                     	 addb %cl, (%rcx,%rsi,1)
  243 0344 000C32                     	 addb %cl, (%rdx,%rsi,1)
@@ -462,7 +462,7 @@ GAS LISTING /tmp/testall.s 			page 1
  438 05ea 00141E                     	 addb %dl, (%rsi,%rbx,1)
  439 05ed 00141F                     	 addb %dl, (%rdi,%rbx,1)
  440 05f0 001424                     	 addb %dl, (%rsp)
- 441 05f3 00142500 000000            	 addb %dl, 0
+ 441 05f3 00142501 000000            	 addb %dl, 1
  442 05fa 001430                     	 addb %dl, (%rax,%rsi,1)
  443 05fd 001431                     	 addb %dl, (%rcx,%rsi,1)
  444 0600 001432                     	 addb %dl, (%rdx,%rsi,1)
@@ -675,7 +675,7 @@ GAS LISTING /tmp/testall.s 			page 1
  639 08a6 001C1E                     	 addb %bl, (%rsi,%rbx,1)
  640 08a9 001C1F                     	 addb %bl, (%rdi,%rbx,1)
  641 08ac 001C24                     	 addb %bl, (%rsp)
- 642 08af 001C2500 000000            	 addb %bl, 0
+ 642 08af 001C2501 000000            	 addb %bl, 1
  643 08b6 001C30                     	 addb %bl, (%rax,%rsi,1)
  644 08b9 001C31                     	 addb %bl, (%rcx,%rsi,1)
  645 08bc 001C32                     	 addb %bl, (%rdx,%rsi,1)
@@ -885,7 +885,7 @@ GAS LISTING /tmp/testall.s 			page 1
  840 0b62 00241E                     	 addb %ah, (%rsi,%rbx,1)
  841 0b65 00241F                     	 addb %ah, (%rdi,%rbx,1)
  842 0b68 002424                     	 addb %ah, (%rsp)
- 843 0b6b 00242500 000000            	 addb %ah, 0
+ 843 0b6b 00242501 000000            	 addb %ah, 1
  844 0b72 002430                     	 addb %ah, (%rax,%rsi,1)
  845 0b75 002431                     	 addb %ah, (%rcx,%rsi,1)
  846 0b78 002432                     	 addb %ah, (%rdx,%rsi,1)
@@ -1098,7 +1098,7 @@ GAS LISTING /tmp/testall.s 			page 1
  1041 0e1e 002C1E                     	 addb %ch, (%rsi,%rbx,1)
  1042 0e21 002C1F                     	 addb %ch, (%rdi,%rbx,1)
  1043 0e24 002C24                     	 addb %ch, (%rsp)
- 1044 0e27 002C2500 000000            	 addb %ch, 0
+ 1044 0e27 002C2501 000000            	 addb %ch, 1
  1045 0e2e 002C30                     	 addb %ch, (%rax,%rsi,1)
  1046 0e31 002C31                     	 addb %ch, (%rcx,%rsi,1)
  1047 0e34 002C32                     	 addb %ch, (%rdx,%rsi,1)
@@ -1308,7 +1308,7 @@ GAS LISTING /tmp/testall.s 			page 1
  1242 10da 00341E                     	 addb %dh, (%rsi,%rbx,1)
  1243 10dd 00341F                     	 addb %dh, (%rdi,%rbx,1)
  1244 10e0 003424                     	 addb %dh, (%rsp)
- 1245 10e3 00342500 000000            	 addb %dh, 0
+ 1245 10e3 00342501 000000            	 addb %dh, 1
  1246 10ea 003430                     	 addb %dh, (%rax,%rsi,1)
  1247 10ed 003431                     	 addb %dh, (%rcx,%rsi,1)
  1248 10f0 003432                     	 addb %dh, (%rdx,%rsi,1)
@@ -1521,7 +1521,7 @@ GAS LISTING /tmp/testall.s 			page 1
  1443 1396 003C1E                     	 addb %bh, (%rsi,%rbx,1)
  1444 1399 003C1F                     	 addb %bh, (%rdi,%rbx,1)
  1445 139c 003C24                     	 addb %bh, (%rsp)
- 1446 139f 003C2500 000000            	 addb %bh, 0
+ 1446 139f 003C2501 000000            	 addb %bh, 1
  1447 13a6 003C30                     	 addb %bh, (%rax,%rsi,1)
  1448 13a9 003C31                     	 addb %bh, (%rcx,%rsi,1)
  1449 13ac 003C32                     	 addb %bh, (%rdx,%rsi,1)
@@ -4764,7 +4764,7 @@ GAS LISTING /tmp/testall.s 			page 1
  4524 52e2 01041E                     	 addl %eax, (%rsi,%rbx,1)
  4525 52e5 01041F                     	 addl %eax, (%rdi,%rbx,1)
  4526 52e8 010424                     	 addl %eax, (%rsp)
- 4527 52eb 01042500 000000            	 addl %eax, 0
+ 4527 52eb 01042501 000000            	 addl %eax, 1
  4528 52f2 010430                     	 addl %eax, (%rax,%rsi,1)
  4529 52f5 010431                     	 addl %eax, (%rcx,%rsi,1)
  4530 52f8 010432                     	 addl %eax, (%rdx,%rsi,1)
@@ -4974,7 +4974,7 @@ GAS LISTING /tmp/testall.s 			page 1
  4725 559e 010C1E                     	 addl %ecx, (%rsi,%rbx,1)
  4726 55a1 010C1F                     	 addl %ecx, (%rdi,%rbx,1)
  4727 55a4 010C24                     	 addl %ecx, (%rsp)
- 4728 55a7 010C2500 000000            	 addl %ecx, 0
+ 4728 55a7 010C2501 000000            	 addl %ecx, 1
  4729 55ae 010C30                     	 addl %ecx, (%rax,%rsi,1)
  4730 55b1 010C31                     	 addl %ecx, (%rcx,%rsi,1)
  4731 55b4 010C32                     	 addl %ecx, (%rdx,%rsi,1)
@@ -5187,7 +5187,7 @@ GAS LISTING /tmp/testall.s 			page 1
  4926 585a 01141E                     	 addl %edx, (%rsi,%rbx,1)
  4927 585d 01141F                     	 addl %edx, (%rdi,%rbx,1)
  4928 5860 011424                     	 addl %edx, (%rsp)
- 4929 5863 01142500 000000            	 addl %edx, 0
+ 4929 5863 01142501 000000            	 addl %edx, 1
  4930 586a 011430                     	 addl %edx, (%rax,%rsi,1)
  4931 586d 011431                     	 addl %edx, (%rcx,%rsi,1)
  4932 5870 011432                     	 addl %edx, (%rdx,%rsi,1)
@@ -5397,7 +5397,7 @@ GAS LISTING /tmp/testall.s 			page 1
  5127 5b16 011C1E                     	 addl %ebx, (%rsi,%rbx,1)
  5128 5b19 011C1F                     	 addl %ebx, (%rdi,%rbx,1)
  5129 5b1c 011C24                     	 addl %ebx, (%rsp)
- 5130 5b1f 011C2500 000000            	 addl %ebx, 0
+ 5130 5b1f 011C2501 000000            	 addl %ebx, 1
 GAS LISTING /tmp/testall.s 			page 91
 
 
@@ -5610,7 +5610,7 @@ GAS LISTING /tmp/testall.s 			page 1
  5328 5dd2 01241E                     	 addl %esp, (%rsi,%rbx,1)
  5329 5dd5 01241F                     	 addl %esp, (%rdi,%rbx,1)
  5330 5dd8 012424                     	 addl %esp, (%rsp)
- 5331 5ddb 01242500 000000            	 addl %esp, 0
+ 5331 5ddb 01242501 000000            	 addl %esp, 1
  5332 5de2 012430                     	 addl %esp, (%rax,%rsi,1)
  5333 5de5 012431                     	 addl %esp, (%rcx,%rsi,1)
  5334 5de8 012432                     	 addl %esp, (%rdx,%rsi,1)
@@ -5823,7 +5823,7 @@ GAS LISTING /tmp/testall.s 			page 1
 
  5530 6091 012C1F                     	 addl %ebp, (%rdi,%rbx,1)
  5531 6094 012C24                     	 addl %ebp, (%rsp)
- 5532 6097 012C2500 000000            	 addl %ebp, 0
+ 5532 6097 012C2501 000000            	 addl %ebp, 1
  5533 609e 012C30                     	 addl %ebp, (%rax,%rsi,1)
  5534 60a1 012C31                     	 addl %ebp, (%rcx,%rsi,1)
  5535 60a4 012C32                     	 addl %ebp, (%rdx,%rsi,1)
@@ -6033,7 +6033,7 @@ GAS LISTING /tmp/testall.s 			page 1
  5730 634a 01341E                     	 addl %esi, (%rsi,%rbx,1)
  5731 634d 01341F                     	 addl %esi, (%rdi,%rbx,1)
  5732 6350 013424                     	 addl %esi, (%rsp)
- 5733 6353 01342500 000000            	 addl %esi, 0
+ 5733 6353 01342501 000000            	 addl %esi, 1
  5734 635a 013430                     	 addl %esi, (%rax,%rsi,1)
  5735 635d 013431                     	 addl %esi, (%rcx,%rsi,1)
  5736 6360 013432                     	 addl %esi, (%rdx,%rsi,1)
@@ -6246,7 +6246,7 @@ GAS LISTING /tmp/testall.s 			page 1
  5931 6606 013C1E                     	 addl %edi, (%rsi,%rbx,1)
  5932 6609 013C1F                     	 addl %edi, (%rdi,%rbx,1)
  5933 660c 013C24                     	 addl %edi, (%rsp)
- 5934 660f 013C2500 000000            	 addl %edi, 0
+ 5934 660f 013C2501 000000            	 addl %edi, 1
  5935 6616 013C30                     	 addl %edi, (%rax,%rsi,1)
  5936 6619 013C31                     	 addl %edi, (%rcx,%rsi,1)
  5937 661c 013C32                     	 addl %edi, (%rdx,%rsi,1)
@@ -18746,3 +18746,19 @@ GAS LISTING /tmp/testall.s 			page 1
  17807 1483e 03BD8000 0000              	 addl 128(%rbp), %edi
  17808 14844 03BE8000 0000              	 addl 128(%rsi), %edi
  17809 1484a 03BF8000 0000              	 addl 128(%rdi), %edi
+ 17810 14850 0401                       	 addb $1, %al
+ 17811 14852 80C101                     	 addb $1, %cl
+ 17812 14855 80C201                     	 addb $1, %dl
+ 17813 14858 80C301                     	 addb $1, %bl
+ 17814 1485b 80C401                     	 addb $1, %ah
+ 17815 1485e 80C501                     	 addb $1, %ch
+ 17816 14861 80C601                     	 addb $1, %dh
+ 17817 14864 80C701                     	 addb $1, %bh
+ 17818 14867 83C001                     	 addl $1, %eax
+ 17819 1486a 83C101                     	 addl $1, %ecx
+ 17820 1486d 83C201                     	 addl $1, %edx
+ 17821 14870 83C301                     	 addl $1, %ebx
+ 17822 14873 83C401                     	 addl $1, %esp
+ 17823 14876 83C501                     	 addl $1, %ebp
+ 17824 14879 83C601                     	 addl $1, %esi
+ 17825 1487c 83C701                     	 addl $1, %edi

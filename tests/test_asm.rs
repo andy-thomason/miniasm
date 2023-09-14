@@ -1,4 +1,6 @@
-use miniasm::x86::{Instruction, EncodeResult};
+// use miniasm::x86::{Instruction, EncodeResult};
+
+use miniasm::{encode_result::EncodeResult, x86::Instruction};
 
 #[test]
 fn test_asm() {
@@ -40,9 +42,9 @@ fn test_asm() {
         let ins = Instruction::from_str(&asm).expect("fail asm");
         let obytes = ins.encode().expect("encode error");
 
-        println!("miniasm: {:02x?} asm: {}", hex::encode(obytes.as_slice()), ins);
+        println!("miniasm: {:02x?} asm: {}", hex::encode(obytes.as_slice().unwrap()), ins);
 
-        assert_eq!(obytes.as_slice(), &bytes);
+        assert_eq!(obytes.as_slice().unwrap(), &bytes);
 
         // Generated instructions must be monotonic.
         assert!(obytes.as_slice() > prev_bytes.as_slice());
