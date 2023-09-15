@@ -74,7 +74,7 @@ pub mod x86 {
         }
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Clone, Copy)]
     #[repr(u8)]
     pub enum RegClass {
         I8,
@@ -87,9 +87,9 @@ pub mod x86 {
 
     #[derive(Debug, PartialEq)]
     pub enum Category {
-        OpFwd,
-        OpRev,
-        OpImm8,
+        OpAddSub,
+        OpPushPop,
+        OpImul,
     }
 
     #[derive(Debug, PartialEq)]
@@ -100,6 +100,9 @@ pub mod x86 {
         S4,
         S8,
     }
+
+    const LABEL_MAX : usize = 16;
+    pub struct Label([u8; LABEL_MAX]);
 
     enum Offsize {
         O0, O1, O4,
@@ -140,6 +143,12 @@ pub mod x86 {
     impl FmtArgs for () {
         fn fmt_args(&self, f: &mut core::fmt::Formatter, name: &str) ->  core::fmt::Result {
             write!(f, "{name}")
+        }
+    }
+
+    impl FmtArgs for Label {
+        fn fmt_args(&self, f: &mut core::fmt::Formatter, name: &str) ->  core::fmt::Result {
+            write!(f, "{name} {}", core::str::from_utf8(&self.0).unwrap())
         }
     }
 
@@ -198,11 +207,74 @@ pub mod x86 {
         }
     }
 
+    // let ops = ["add", "or", "adc", "sbb", "and", "sub", "xor"];
+
     insn! {
-        AddB((Arg, Arg)), "addb", (I8, 0),
-        AddW((Arg, Arg)), "addw", (I16, 0),
-        AddL((Arg, Arg)), "addl", (I32, 0),
-        AddQ((Arg, Arg)), "addq", (I64, 0),
+        AddB((Arg, Arg)), "addb", (I8, 0, Category::OpAddSub),
+        AddW((Arg, Arg)), "addw", (I16, 0, Category::OpAddSub),
+        AddL((Arg, Arg)), "addl", (I32, 0, Category::OpAddSub),
+        AddQ((Arg, Arg)), "addq", (I64, 0, Category::OpAddSub),
+        OrB((Arg, Arg)), "orb", (I8, 1, Category::OpAddSub),
+        OrW((Arg, Arg)), "orw", (I16, 1, Category::OpAddSub),
+        OrL((Arg, Arg)), "orl", (I32, 1, Category::OpAddSub),
+        OrQ((Arg, Arg)), "orq", (I64, 1, Category::OpAddSub),
+        AdcB((Arg, Arg)), "adcb", (I8, 2, Category::OpAddSub),
+        AdcW((Arg, Arg)), "adcw", (I16, 2, Category::OpAddSub),
+        AdcL((Arg, Arg)), "adcl", (I32, 2, Category::OpAddSub),
+        AdcQ((Arg, Arg)), "adcq", (I64, 2, Category::OpAddSub),
+        SbbB((Arg, Arg)), "sbbb", (I8, 3, Category::OpAddSub),
+        SbbW((Arg, Arg)), "sbbw", (I16, 3, Category::OpAddSub),
+        SbbL((Arg, Arg)), "sbbl", (I32, 3, Category::OpAddSub),
+        SbbQ((Arg, Arg)), "sbbq", (I64, 3, Category::OpAddSub),
+        AndB((Arg, Arg)), "andb", (I8, 4, Category::OpAddSub),
+        AndW((Arg, Arg)), "andw", (I16, 4, Category::OpAddSub),
+        AndL((Arg, Arg)), "andl", (I32, 4, Category::OpAddSub),
+        AndQ((Arg, Arg)), "andq", (I64, 4, Category::OpAddSub),
+        SubB((Arg, Arg)), "subb", (I8, 5, Category::OpAddSub),
+        SubW((Arg, Arg)), "subw", (I16, 5, Category::OpAddSub),
+        SubL((Arg, Arg)), "subl", (I32, 5, Category::OpAddSub),
+        SubQ((Arg, Arg)), "subq", (I64, 5, Category::OpAddSub),
+        XorB((Arg, Arg)), "xorb", (I8, 6, Category::OpAddSub),
+        XorW((Arg, Arg)), "xorw", (I16, 6, Category::OpAddSub),
+        XorL((Arg, Arg)), "xorl", (I32, 6, Category::OpAddSub),
+        XorQ((Arg, Arg)), "xorq", (I64, 6, Category::OpAddSub),
+        CmpB((Arg, Arg)), "cmpb", (I8, 7, Category::OpAddSub),
+        CmpW((Arg, Arg)), "cmpw", (I16, 7, Category::OpAddSub),
+        CmpL((Arg, Arg)), "cmpl", (I32, 7, Category::OpAddSub),
+        CmpQ((Arg, Arg)), "cmpq", (I64, 7, Category::OpAddSub),
+        PushQ(Arg), "pushq", (I64, 0, Category::OpPushPop),
+        PopQ(Arg), "popq", (I64, 1, Category::OpPushPop),
+        //IMulL((Arg, Arg, Arg)), "imull", (I32, 0, Category::OpImul),
+        Jo(Label), "jo", 0x70,
+        Jno(Label), "jno", 0x71,
+        Jb(Label), "jb", 0x72,
+        Jnae(Label), "jnae", 0x72,
+        Jc(Label), "jc", 0x72,
+        Jnb(Label), "jnb", 0x73,
+        Jae(Label), "jae", 0x73,
+        Jnc(Label), "jnc", 0x73,
+        Jz(Label), "jz", 0x74,
+        Je(Label), "je", 0x74,
+        Jnz(Label), "jnz", 0x75,
+        Jne(Label), "jne", 0x75,
+        Jbe(Label), "jbe", 0x76,
+        Jna(Label), "jna", 0x76,
+        Jnbe(Label), "jnbe", 0x77,
+        Ja(Label), "ja", 0x77,
+        Js(Label), "js", 0x78,
+        Jns(Label), "jns", 0x79,
+        Jp(Label), "jp", 0x7A,
+        Jpe(Label), "jpe", 0x7A,
+        Jnp(Label), "jnp", 0x7B,
+        Jpo(Label), "jpo", 0x7B,
+        Jl(Label), "jl", 0x7C,
+        Jnge(Label), "jnge", 0x7C,
+        Jnl(Label), "jnl", 0x7D,
+        Jge(Label), "jge", 0x7D,
+        Jle(Label), "jle", 0x7E,
+        Jng(Label), "jng", 0x7E,
+        Jnle(Label), "jnle", 0x7F,
+        Jg(Label), "jg", 0x7F,
         RetQ(()), "retq", 0xc3,
     }
 
@@ -283,56 +355,127 @@ pub mod x86 {
         }
     }
 
-    impl Encode for (&(Arg, Arg), (RegClass, u8)) {
+    impl Encode for (&Label, u8) {
+        fn encode(self) -> Result<EncodeResult, EncodeError> {
+            let mut res = EncodeResult::default();
+            res.push_u8(self.1);
+            Ok(res)
+        }
+    }
+
+    impl Encode for (&Arg, (RegClass, u8, Category)) {
         #[inline(never)]
         fn encode(self) -> Result<EncodeResult, EncodeError> {
-            let ((src, dest), (class, group)) = self;
+            let (dest, (class, group, category)) = self;
+            use Arg::*;
+            let mut res = EncodeResult::default();
+            match dest {
+                R(rm) => {
+                    generic_ins(&mut res, class, group, category, None, Some(rm), None, None, None, &Scale::S1, None, false)?;
+                }
+                M(imm) => {
+                    generic_ins(&mut res, class, group, category, None, None, Some(*imm), None, None, &Scale::S1, None, false)?;
+                }
+                Mr(offset, a) => {
+                    generic_ins(&mut res, class, group, category, None, None, Some(*offset), Some(a), None, &Scale::S1, None, false)?;
+                }
+                Ms(offset, sr, scale) => {
+                    generic_ins(&mut res, class, group, category, None, None, Some(*offset), None, Some(sr), scale, None, false)?;
+                }
+                M2s(offset, a, sr, scale) => {
+                    generic_ins(&mut res, class, group, category, None, None, Some(*offset), Some(a), Some(sr), scale, None, false)?;
+                }
+                I(immediate) => {
+                    generic_ins(&mut res, class, group, category, None, None, None, None, None, &Scale::S1, Some(*immediate), false)?;
+                }
+                _ => todo!(),
+            }
+            Ok(res)
+        }
+    }
+
+    // /// Encoding for add, sub etc. in one of 8 groups.
+    // impl Encode for (&(Arg, Arg), (RegClass, u8)) {
+    //     #[inline(never)]
+    //     fn encode(self) -> Result<EncodeResult, EncodeError> {
+    //         let ((src, dest), (class, group)) = self;
+    //         use Arg::*;
+    //         let mut res = EncodeResult::default();
+    //         match (src, dest) {
+    //             (R(r), R(rm)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpFwd, Some(r), Some(rm), None, None, None, &Scale::S1, None)?;
+    //             }
+    //             (R(r), M(imm)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*imm), None, None, &Scale::S1, None)?;
+    //             }
+    //             (R(r), Mr(offset, a)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
+    //             }
+    //             (R(r), Ms(offset, sr, scale)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
+    //             }
+    //             (R(r), M2s(offset, a, sr, scale)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
+    //             }
+    //             (I(immediate), R(rm)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpImm8, None, Some(rm), None, None, None, &Scale::S1, Some(*immediate))?;
+    //             }
+    //             // (I(_), M(_, _)) => todo!(),
+    //             // (I(_), Ms(_, _, _)) => todo!(),
+    //             // (I(_), M2s(_, _, _, _)) => todo!(),
+    //             (Mr(offset, a), R(r)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
+    //             }
+    //             (Ms(offset, sr, scale), R(r)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
+    //             }
+    //             (M2s(offset, a, sr, scale), R(r)) => {
+    //                 generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
+    //             }
+    //             _ => todo!(),
+    //         }
+    //         Ok(res)
+    //     }
+    // }
+
+    /// Encoding for two arg ops.
+    impl Encode for (&(Arg, Arg), (RegClass, u8, Category)) {
+        #[inline(never)]
+        fn encode(self) -> Result<EncodeResult, EncodeError> {
+            let ((src, dest), (class, group, category)) = self;
             use Arg::*;
             let mut res = EncodeResult::default();
             match (src, dest) {
                 (R(r), R(rm)) => {
-                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), Some(rm), None, None, None, &Scale::S1, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), Some(rm), None, None, None, &Scale::S1, None, false)?;
                 }
                 (R(r), M(imm)) => {
-                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*imm), None, None, &Scale::S1, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*imm), None, None, &Scale::S1, None, false)?;
                 }
                 (R(r), Mr(offset, a)) => {
-                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None, false)?;
                 }
                 (R(r), Ms(offset, sr, scale)) => {
-                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), None, Some(sr), scale, None, false)?;
                 }
                 (R(r), M2s(offset, a, sr, scale)) => {
-                    generic_ins(&mut res, class, group, Category::OpFwd, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None, false)?;
                 }
                 (I(immediate), R(rm)) => {
-                    generic_ins(&mut res, class, group, Category::OpImm8, None, Some(rm), None, None, None, &Scale::S1, Some(*immediate))?;
+                    generic_ins(&mut res, class, group, category, None, Some(rm), None, None, None, &Scale::S1, Some(*immediate), false)?;
                 }
-                // (I(_), I(_)) => todo!(),
                 // (I(_), M(_, _)) => todo!(),
                 // (I(_), Ms(_, _, _)) => todo!(),
                 // (I(_), M2s(_, _, _, _)) => todo!(),
                 (Mr(offset, a), R(r)) => {
-                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), Some(a), None, &Scale::S1, None, true)?;
                 }
-                // (M(_, _), I(_)) => todo!(),
-                // (M(_, _), M(_, _)) => todo!(),
-                // (M(_, _), Ms(_, _, _)) => todo!(),
-                // (M(_, _), M2s(_, _, _, _)) => todo!(),
                 (Ms(offset, sr, scale), R(r)) => {
-                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), None, Some(sr), scale, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), None, Some(sr), scale, None, true)?;
                 }
-                // (Ms(_, _, _), I(_)) => todo!(),
-                // (Ms(_, _, _), M(_, _)) => todo!(),
-                // (Ms(_, _, _), Ms(_, _, _)) => todo!(),
-                // (Ms(_, _, _), M2s(_, _, _, _)) => todo!(),
                 (M2s(offset, a, sr, scale), R(r)) => {
-                    generic_ins(&mut res, class, group, Category::OpRev, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None)?;
+                    generic_ins(&mut res, class, group, category, Some(r), None, Some(*offset), Some(a), Some(sr), scale, None, true)?;
                 }
-                // (M2s(_, _, _, _), I(_)) => todo!(),
-                // (M2s(_, _, _, _), M(_, _)) => todo!(),
-                // (M2s(_, _, _, _), Ms(_, _, _)) => todo!(),
-                // (M2s(_, _, _, _), M2s(_, _, _, _)) => todo!(),
                 _ => todo!(),
             }
             Ok(res)
@@ -342,6 +485,18 @@ pub mod x86 {
     impl FromStr for () {
         fn from_str(_src: &str) -> Result<Self, ParseError> {
             Ok(())
+        }
+    }
+
+    impl FromStr for Label {
+        fn from_str(src: &str) -> Result<Self, ParseError> {
+            let mut res = [0; LABEL_MAX];
+            if src.len() > LABEL_MAX {
+                Err(ParseError)
+            } else {
+                res[0..src.len()].copy_from_slice(src.as_bytes());
+                Ok(Label(res))
+            }
         }
     }
 
@@ -445,8 +600,7 @@ pub mod x86 {
     }
 
 
-    // fn gen_prefix(res: &mut EncodeResult, class: RegClass, aclass: Option<RegClass>, ns: u8, nd: Option<u8>, na: Option<u8>, rexr: u8, rexx: u8, rexb: u8) -> Result<(), EncodeError>  {
-    fn generic_ins(res: &mut EncodeResult, class: RegClass, group: u8, category: Category, r: Option<&Reg>, rm: Option<&Reg>, offset: Option<i32>, a: Option<&Reg>, sr: Option<&Reg>, scale: &Scale, immediate: Option<i32>) -> Result<(), EncodeError> {
+    fn generic_ins(res: &mut EncodeResult, class: RegClass, group: u8, category: Category, r: Option<&Reg>, rm: Option<&Reg>, offset: Option<i32>, a: Option<&Reg>, sr: Option<&Reg>, scale: &Scale, immediate: Option<i32>, rev: bool) -> Result<(), EncodeError> {
         use RegClass::*;
 
         // rm and a/sr are exclusive
@@ -455,26 +609,112 @@ pub mod x86 {
             return Err(EncodeError);
         }
 
-        if a.map(Reg::class) == Some(I32) {
-            res.push_u8(0x67);
-        }
-
         let rclass = r.map(Reg::class);
         let rmclass = rm.map(Reg::class);
         let aclass = a.map(Reg::class);
         let srclass = sr.map(Reg::class);
 
         let rlownum = r.map(Reg::lownum).unwrap_or_default();
-        let r2lownum = rm.map(Reg::lownum).unwrap_or_default();
-        let alownum = a.map(Reg::lownum).unwrap_or_default();
-        let srlownum = sr.map(Reg::lownum).unwrap_or_default();
+        let rmlownum = rm.map(Reg::lownum).unwrap_or_default();
+        // let alownum = a.map(Reg::lownum).unwrap_or_default();
+        // let srlownum = sr.map(Reg::lownum).unwrap_or_default();
         let rhighnum = r.map(Reg::highnum).unwrap_or_default();
+
+        // If %spl is used instead of %ah, use an 0x40 rex prefix anyway.
+        use Reg::*;
+        let is_spl_and_friends = 
+            matches!(r, Some(SPL)|Some(BPL)|Some(SIL)|Some(DIL)) ||
+            matches!(rm, Some(SPL)|Some(BPL)|Some(SIL)|Some(DIL));
+
+        match category {
+            Category::OpAddSub => {
+                if !rev {
+                    if let Some(immediate) = immediate {
+                        match rm {
+                            Some(Reg::AL) => if immediate >= -128 && immediate < 128 {
+                                res.push_u8(group * 8 + 4);
+                                res.push_i8(immediate.try_into().map_err(|_| EncodeError)?);
+                            }
+                            Some(Reg::EAX) => if immediate <= -129 || immediate >= 128 {
+                                res.push_u8(group * 8 + 5);
+                                res.push_i32(immediate.try_into().map_err(|_| EncodeError)?);
+                                return Ok(());
+                            }
+                            _ => {
+                                gen_prefix(res, class, rhighnum, rm, a, sr, is_spl_and_friends)?;
+        
+                                match class {
+                                    I8|H8 => res.push_u8(0x80 + group),
+                                    I32 => res.push_u8(0x83 + group),
+                                    _ => todo!(),
+                                }
+                                
+                                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+                                res.push_i8(immediate.try_into().map_err(|_| EncodeError)?);
+                            }
+                        }
+                    } else {
+                        gen_prefix(res, class, rhighnum, rm, a, sr, is_spl_and_friends)?;
+                        if matches!(rclass, Some(I8)|Some(H8)) {
+                            res.push_u8(group * 8 + 0);
+                        } else {
+                            res.push_u8(group * 8 + 1);
+                        }
+                        gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+                    }
+                } else {
+                    gen_prefix(res, class, rhighnum, rm, a, sr, is_spl_and_friends)?;
+                    if matches!(rclass, Some(I8)|Some(H8)) {
+                        res.push_u8(group * 8 + 2);
+                    } else {
+                        res.push_u8(group * 8 + 3);
+                    }
+                    gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
+                }
+            }
+            Category::OpPushPop => {
+                if let Some(immediate) = immediate {
+                    if group != 0 { return Err(EncodeError); }
+                    if immediate >= 0 && immediate < 256 {
+                        res.push_u8(0x6a);
+                        res.push_u8(immediate.try_into().map_err(|_| EncodeError)?);
+                    } else {
+                        res.push_u8(0x68);
+                        res.push_i32(immediate);
+                    }
+                } else if matches!((rmclass, aclass, srclass), (Some(I64), None, None)) {
+                    res.push_u8(0x50 + group * 8 + rmlownum);
+                } else {
+                    todo!();
+                }
+            },
+            Category::OpImul => {
+                if let Some(immediate) = immediate {
+                    if immediate >= 0 && immediate < 256 {
+                        res.push_u8(0x6b);
+                        res.push_u8(immediate.try_into().map_err(|_| EncodeError)?);
+                    } else {
+                        res.push_u8(0x69);
+                        res.push_i32(immediate);
+                    }
+                } else {
+                    todo!();
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn gen_prefix(res: &mut EncodeResult, class: RegClass, rhighnum: u8, rm: Option<&Reg>, a: Option<&Reg>, sr: Option<&Reg>, is_spl_and_friends: bool) -> Result<(), EncodeError> {
+        let aclass = a.map(Reg::class);
 
         // https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/40332.pdf
         // REX.W 3 0 = Default operand size 1 = 64-bit operand size
         // REX.R 2 1-bit (msb) extension of the ModRM reg field 1 , permitting access to 16 registers.
         // REX.X 1 1-bit (msb) extension of the SIB index field 1 , permitting access to 16 registers.
         // REX.B 0 1-bit (msb) extension of the ModRM r/m field 1 , SIB base field 1 , or opcode reg field, permitting access to 16 registers.
+        use RegClass::*;
 
         let rexw = (class == I64) as u8;
         let rexr = rhighnum;
@@ -490,105 +730,11 @@ pub mod x86 {
             res.push_u8(0x66);
         }
 
-        // If %spl is used instead of %ah, use an 0x40 rex prefix anyway.
-        let is_spl_and_friends =
-            rclass == Some(I8) && rlownum >= 4 ||
-            rmclass == Some(I8) && r2lownum >= 4;
+
 
         if rex != 0x40 || is_spl_and_friends {
             res.push_u8(rex);
         }
-
-        match category {
-            Category::OpFwd => {
-                if matches!(rclass, Some(I8)|Some(H8)) {
-                    res.push_u8(group * 8 + 0);
-                } else {
-                    res.push_u8(group * 8 + 1);
-                }
-                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
-            }
-            Category::OpRev => {
-                if matches!(rclass, Some(I8)|Some(H8)) {
-                    res.push_u8(group * 8 + 2);
-                } else {
-                    res.push_u8(group * 8 + 3);
-                }
-                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
-            }
-            Category::OpImm8 => {
-                // panic!("{:?}", (rclass, r2class, aclass, srclass));
-                match rm {
-                    Some(Reg::AL) => {
-                        res.push_u8(group * 8 + 4);
-                        res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
-                        return Ok(());
-                    }
-                    // Some(Reg::EAX) => {
-                    //     res.push_u8(group * 8 + 4);
-                    //     res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
-                    //     return Ok(());
-                    // }
-                    _ => (),
-                }
-                match class {
-                    I8|H8 => res.push_u8(0x80 + group),
-                    I32 => res.push_u8(0x83 + group),
-                    _ => todo!(),
-                }
-                
-                gen_modrm(res, rlownum, class, rm, a, sr, offset, scale)?;
-                res.push_u8(immediate.unwrap().try_into().map_err(|_| EncodeError)?);
-            }
-        }
-
-        // match (rmclass, aclass, srclass) {
-        //     (None, Some(a), None) if class.is_int() && a == RegClass::PC => {
-        //         res.push_u8(base + 5);
-        //         offsize = Offsize::O4;
-        //     }
-        //     (None, Some(a), None) if class.is_int() && a.is_addr() => {
-        //         if alownum != 4 || rexx == 1 {
-        //             // not SP
-        //             res.push_u8(base + alownum);
-        //         } else {
-        //             // SP uses SIB.
-        //             res.push_u8(base + 4);
-        //             res.push_u8(sibupper + 4 * 8 + alownum);
-        //         }
-        //     }
-        //     (Some(rm), None, None) if class.is_8bit() && rm.is_8bit() => {
-        //         res.push_u8(base + r2lownum);
-        //     }
-        //     (Some(rm), None, None) if class.is_int() && rm == class => {
-        //         res.push_u8(base + r2lownum);
-        //     }
-        //     (None, Some(a), Some(sr)) if class.is_int() && a.is_addr() && sr.is_addr() => {
-        //         res.push_u8(base + 4);
-        //         res.push_u8(sibupper + srlownum * 8 + alownum);
-        //     }
-        //     (None, None, Some(sr)) if class.is_int() && sr.is_addr() => {
-        //         res.push_u8(base + 4);
-        //         res.push_u8(sibupper + srlownum * 8 + 5);
-        //         offsize = Offsize::O4;
-        //     }
-        //     (None, None, None) if class.is_int() => {
-        //         res.push_u8(base + 4);
-        //         res.push_u8(sibupper + 4 * 8 + 5);
-        //         offsize = Offsize::O4;
-        //     }
-        //     _ => todo!(),
-        // }
-
-        // if let Some(immediate) = immediate {
-        //     match class {
-        //         I8|H8 => res.push_u8(immediate.try_into().map_err(|_| EncodeError)?),
-        //         I16 => res.push_i16(immediate.try_into().map_err(|_| EncodeError)?),
-        //         I32 => res.push_i32(immediate.try_into().map_err(|_| EncodeError)?),
-        //         I64 => res.push_i32(immediate.try_into().map_err(|_| EncodeError)?),
-        //         _ => return Err(EncodeError),
-        //     }
-        // }
 
         Ok(())
     }

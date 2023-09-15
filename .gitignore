@@ -18,3 +18,4 @@ asm/x86/*.list
 asm/x86/*.dis
 
 
+a.out
